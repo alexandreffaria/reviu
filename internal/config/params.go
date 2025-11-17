@@ -46,6 +46,13 @@ func (v *DefaultValidator) ValidateSearchParams(params *SearchParams) error {
 	// Normalize languages
 	normalizeLanguages(params)
 	
+	// Validate export parameters if export is enabled
+	if params.ExportResults {
+		if err := validateExportParams(params); err != nil {
+			return err
+		}
+	}
+	
 	// Mark params as validated
 	params.Valid = true
 	
@@ -140,4 +147,31 @@ func normalizeLanguages(params *SearchParams) {
 	for i, lang := range params.Languages {
 		params.Languages[i] = strings.TrimSpace(lang)
 	}
+}
+
+// validateExportParams validates export-related parameters
+func validateExportParams(params *SearchParams) error {
+	// Validate output file
+	if params.ExportResults && params.OutputFile == "" {
+		return errors.NewConfigError("output file is required when export is enabled", nil)
+	}
+	
+	// Validate export format
+	if params.ExportFormat != "" && params.ExportFormat != "csv" {
+		return errors.NewConfigError(
+			fmt.Sprintf("unsupported export format: %s (only 'csv' is currently supported)",
+						params.ExportFormat),
+			nil,
+		)
+	}
+	
+	// Validate max pages
+	if params.MaxPages < 0 {
+		return errors.NewConfigError(
+			fmt.Sprintf("invalid max pages: %d (must be 0 or positive)", params.MaxPages),
+			nil,
+		)
+	}
+	
+	return nil
 }

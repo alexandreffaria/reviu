@@ -131,6 +131,22 @@ func (c *CLI) PrintSearchReport(params *config.SearchParams) {
 	} else {
 		fmt.Printf("Idiomas:            qualquer\n")
 	}
+
+	// Export information (if enabled)
+	if params.ExportResults && params.OutputFile != "" {
+		fmt.Println("----------------------------------------")
+		fmt.Printf("Exportação de resultados: Habilitada\n")
+		fmt.Printf("Arquivo de saída: %s\n", params.OutputFile)
+		fmt.Printf("Formato: %s\n", params.ExportFormat)
+		
+		if params.MaxPages > 0 {
+			fmt.Printf("Máximo de páginas: %d\n", params.MaxPages)
+		} else {
+			fmt.Printf("Máximo de páginas: todas\n")
+		}
+		
+		fmt.Printf("Incluir cabeçalhos: %v\n", params.IncludeHeaders)
+	}
 	fmt.Println("========================================\n")
 }
 
@@ -142,4 +158,43 @@ func (c *CLI) PrintSearchURL(url string) {
 // PrintBrowserInfo prints information about the browser status
 func (c *CLI) PrintBrowserInfo(message string) {
 	fmt.Println(message)
+}
+
+// PrintExportStatus prints status updates during the export process
+func (c *CLI) PrintExportStatus(currentPage int, totalResults int, filename string) {
+	fmt.Printf("Processando página %d... (%d resultados encontrados até agora)\r", currentPage, totalResults)
+}
+
+// PrintExportCompletion prints the final export status
+func (c *CLI) PrintExportCompletion(totalPages int, totalResults int, filename string, duration string) {
+	fmt.Printf("\nExportação concluída:\n")
+	fmt.Printf("- Páginas processadas: %d\n", totalPages)
+	fmt.Printf("- Resultados exportados: %d\n", totalResults)
+	fmt.Printf("- Arquivo salvo em: %s\n", filename)
+	fmt.Printf("- Tempo total: %s\n", duration)
+}
+
+// PrintUsage prints help information about command-line flags
+func (c *CLI) PrintUsage() {
+	fmt.Println("\nUso: capes-search [flags]")
+	
+	fmt.Println("\nFlags de busca:")
+	fmt.Println("  -search   Termo de busca (ex: 'inteligência artificial')")
+	fmt.Println("  -oa       Acesso aberto: 'sim', 'nao' ou omitir para qualquer")
+	fmt.Println("  -t        Tipo de publicação (ex: 'Artigo')")
+	fmt.Println("  -pymin    Ano mínimo de publicação (ex: 2010)")
+	fmt.Println("  -pymax    Ano máximo de publicação (ex: 2023)")
+	fmt.Println("  -pr       Revisão por pares: 'sim', 'nao' ou omitir para qualquer")
+	fmt.Println("  -lang     Idiomas separados por '/' (ex: 'Português/Inglês')")
+	
+	fmt.Println("\nFlags de exportação:")
+	fmt.Println("  -output     Arquivo para salvar os resultados (ex: 'resultados.csv')")
+	fmt.Println("  -format     Formato de exportação (atualmente apenas 'csv')")
+	fmt.Println("  -max-pages  Número máximo de páginas a processar (0 = todas)")
+	fmt.Println("  -no-headers Não incluir cabeçalhos no arquivo CSV")
+	
+	fmt.Println("\nExemplos:")
+	fmt.Println("  capes-search -search \"violência contra mulheres\"")
+	fmt.Println("  capes-search -search \"inteligência artificial\" -oa sim -output \"resultados.csv\"")
+	fmt.Println("  capes-search -search \"vacinas\" -pr sim -lang \"Português/Inglês\" -max-pages 5 -output \"vacinas.csv\"")
 }

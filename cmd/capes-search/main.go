@@ -12,6 +12,7 @@ import (
 	"github.com/alexandreffaria/reviu/internal/config"
 	"github.com/alexandreffaria/reviu/internal/errors"
 	"github.com/alexandreffaria/reviu/internal/logger"
+	"github.com/alexandreffaria/reviu/internal/result"
 	"github.com/alexandreffaria/reviu/internal/search"
 )
 
@@ -64,6 +65,7 @@ func run(log logger.Logger) error {
 	configLog := log.WithPrefix("Config")
 	searchLog := log.WithPrefix("Search")
 	browserLog := log.WithPrefix("Browser")
+	resultLog := log.WithPrefix("Result")
 
 	// Initialize CLI
 	cli := cli.NewCLI(cliLog)
@@ -114,15 +116,42 @@ func run(log logger.Logger) error {
 		}
 	}()
 
-	// Open browser with the search URL
-	cli.PrintBrowserInfo("Abrindo navegador com a URL de busca...")
-	if err := browser.Open(searchURL); err != nil {
-		return err
+	// Determine if we're doing a simple view or exporting results
+	if params.ExportResults && params.OutputFile != "" {
+		// We're exporting results - use the result processor
+		resultLog.Info("Starting result export to %s", params.OutputFile)
+		cli.PrintBrowserInfo(fmt.Sprintf("Iniciando exportação de resultados para: %s", params.OutputFile))
+		cli.PrintBrowserInfo("Este processo pode demorar alguns minutos dependendo do número de resultados...")
+
+		// Create result processor
+		processor := result.NewResultProcessor(browser, resultLog)
+		
+		// Set browser to headless mode for export (optional)
+		// This could be made configurable with a flag
+		//browser.WithHeadless(true)
+		
+		// Process and export results
+		err := processor.ProcessSearchResults(params, searchURL)
+		if err != nil {
+			return err
+		}
+		
+		// Show success message
+		cli.PrintBrowserInfo(fmt.Sprintf("Exportação concluída com sucesso para: %s", params.OutputFile))
+		cli.PrintBrowserInfo("Você pode abrir o arquivo CSV em um editor de planilhas como Excel ou LibreOffice Calc.")
+
+		return nil
+	} else {
+		// Simple view mode - just open the browser to show results
+		cli.PrintBrowserInfo("Abrindo navegador com a URL de busca...")
+		if err := browser.Open(searchURL); err != nil {
+			return err
+		}
+
+		// Keep browser open for viewing results
+		cli.PrintBrowserInfo("Busca realizada com sucesso.")
+		cli.PrintBrowserInfo("Mantendo navegador aberto por 30 segundos para visualização dos resultados.")
+
+		return browser.Wait(30 * time.Second)
 	}
-
-	// Keep browser open for viewing results
-	cli.PrintBrowserInfo("Busca realizada com sucesso.")
-	cli.PrintBrowserInfo("Mantendo navegador aberto por 30 segundos para visualização dos resultados.")
-
-	return browser.Wait(30 * time.Second)
 }

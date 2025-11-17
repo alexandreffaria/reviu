@@ -19,6 +19,13 @@ type SearchParams struct {
 	PeerReviewed   string // "sim", "nao", or "" (any)
 	Languages      []string
 
+	// Export configuration
+	OutputFile      string // Path to output file for search results
+	ExportResults   bool   // Whether to export results (default: true if OutputFile is set)
+	ExportFormat    string // Format to use for export (default: "csv")
+	MaxPages        int    // Maximum number of pages to process (0 = all)
+	IncludeHeaders  bool   // Whether to include headers in CSV export (default: true)
+
 	// Computed parameters (populated during validation)
 	EffectiveYearMax int // Calculated max year value
 	CurrentYear      int // Current year (for relative calculations)
@@ -98,13 +105,27 @@ func (p *SearchParams) String() string {
 		}
 	}
 
-	return "SearchParams{" +
+	result := "SearchParams{" +
 		"SearchTerm: " + p.SearchTerm +
 		", AccessType: " + access +
 		", PublicationType: " + pubType +
 		", YearRange: " + yearRange +
 		", PeerReviewed: " + peerReview +
-		", Languages: " + languages +
-		", Valid: " + fmt.Sprintf("%v", p.Valid) +
-		"}"
+		", Languages: " + languages
+
+	// Add export parameters if they're set
+	if p.OutputFile != "" {
+		result += ", OutputFile: " + p.OutputFile
+		result += ", ExportFormat: " + p.ExportFormat
+		
+		if p.MaxPages > 0 {
+			result += ", MaxPages: " + fmt.Sprintf("%d", p.MaxPages)
+		} else {
+			result += ", MaxPages: all"
+		}
+	}
+
+	result += ", Valid: " + fmt.Sprintf("%v", p.Valid) + "}"
+	
+	return result
 }

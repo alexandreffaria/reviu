@@ -8,12 +8,14 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/alexandreffaria/reviu/internal/errors"
 	"github.com/alexandreffaria/reviu/internal/logger"
 )
 
 // Browser defines the interface for browser interactions
 type Browser interface {
+	// Basic browser operations
 	// Open launches a browser and navigates to the provided URL
 	// Returns an error if the browser fails to launch or navigate
 	Open(url string) error
@@ -25,6 +27,21 @@ type Browser interface {
 	// Close closes the browser instance and cleans up resources
 	// Returns an error if cleanup fails
 	Close() error
+
+	// DOM interaction methods
+	GetElements(selector string) ([]*rod.Element, error)
+	GetElement(selector string) (*rod.Element, error)
+	ElementExists(selector string) (bool, error)
+	ClickElement(selector string) error
+	GetElementText(selector string) (string, error)
+	GetElementAttribute(selector, attr string) (string, error)
+	WaitForElement(selector string, timeout time.Duration) error
+	WaitForNavigation(timeout time.Duration) error
+	ExtractLinks(selector string) ([]LinkData, error)
+	
+	// Scrolling operations
+	ScrollToBottom() error
+	ScrollForDuration(duration time.Duration) error
 }
 
 // BrowserOptions contains configuration options for the browser
@@ -82,9 +99,7 @@ func NewBrowser(log logger.Logger, options *BrowserOptions) Browser {
 func (b *RodBrowser) Open(url string) error {
 	b.log.Info("Launching browser...")
 	
-	// Create a timeout context for browser operations
-	timeoutCtx, cancel := context.WithTimeout(b.ctx, b.options.Timeout)
-	defer cancel()
+	// Will set timeout after browser is initialized
 	
 	// Configure and launch the browser
 	l := launcher.New().Headless(b.options.Headless)
@@ -100,11 +115,12 @@ func (b *RodBrowser) Open(url string) error {
 	if err != nil {
 		return errors.NewBrowserError("failed to connect to browser", err)
 	}
-	b.browser = browser
+	// Set the browser with timeout
+	b.browser = browser.Timeout(b.options.Timeout)
 	
 	// Create a new page
 	b.log.Info("Opening URL: %s", url)
-	page, err := browser.Page(timeoutCtx)
+	page, err := browser.Page(proto.TargetCreateTarget{})
 	if err != nil {
 		b.Close() // Clean up on error
 		return errors.NewBrowserError("failed to create page", err)
@@ -157,7 +173,7 @@ func (b *RodBrowser) Wait(duration time.Duration) error {
 	}
 }
 
-// Close closes the browser and cleans up resources
+// Close closes the browser and cleans up resources with timeout handling
 func (b *RodBrowser) Close() error {
 	b.cancel() // Cancel any ongoing operations
 	
@@ -165,9 +181,31 @@ func (b *RodBrowser) Close() error {
 	
 	var errs []error
 	
+	// Function to close with timeout
+	closeWithTimeout := func(closeFn func() error, operation string, timeout time.Duration) error {
+		done := make(chan error, 1)
+		
+		// Start close operation in a goroutine
+		go func() {
+			done <- closeFn()
+		}()
+		
+		// Wait for completion or timeout
+		select {
+		case err := <-done:
+			return err
+		case <-time.After(timeout):
+			b.log.Warn("Timeout while %s", operation)
+			return fmt.Errorf("timeout while %s", operation)
+		}
+	}
+	
 	// Close page if it exists
 	if b.page != nil {
-		if err := b.page.Close(); err != nil {
+		// Use short timeout for page closing
+		err := closeWithTimeout(b.page.Close, "closing page", 5*time.Second)
+		if err != nil {
+			b.log.Warn("Error closing page: %v (continuing anyway)", err)
 			errs = append(errs, errors.NewBrowserError("failed to close page", err))
 		}
 		b.page = nil
@@ -175,16 +213,19 @@ func (b *RodBrowser) Close() error {
 	
 	// Close browser if it exists
 	if b.browser != nil {
-		if err := b.browser.Close(); err != nil {
+		// Use short timeout for browser closing
+		err := closeWithTimeout(b.browser.Close, "closing browser", 5*time.Second)
+		if err != nil {
+			b.log.Warn("Error closing browser: %v (continuing anyway)", err)
 			errs = append(errs, errors.NewBrowserError("failed to close browser", err))
 		}
 		b.browser = nil
 	}
 	
 	if len(errs) > 0 {
-		// Return the first error for simplicity
-		// In a more complex implementation, we might want to combine errors
-		return errs[0]
+		// Log the errors but still consider the operation successful
+		b.log.Info("Browser resources cleaned up with some errors")
+		return nil // Return nil to avoid cascading errors
 	}
 	
 	b.log.Info("Browser closed successfully")
