@@ -35,6 +35,9 @@ func main() {
 	// Definir flags para busca
 	searchTerm := flag.String("search", "Violência contra mulheres", "Termo para pesquisar")
 	acessoAberto := flag.String("oa", "", "Acesso aberto: 'sim', 'nao' ou omitir para qualquer")
+	tipoPublicacao := flag.String("t", "", "Tipo de publicação (ex: 'Artigo')")
+	anoMinimo := flag.Int("pymin", 0, "Ano mínimo de publicação")
+	anoMaximo := flag.Int("pymax", 0, "Ano máximo de publicação")
 	flag.Parse()
 
 	// Se o termo de busca não foi fornecido como flag, solicitar ao usuário
@@ -60,30 +63,71 @@ func main() {
 	} else {
 		fmt.Printf("Acesso aberto:     qualquer\n")
 	}
+	
+	if *tipoPublicacao != "" {
+		fmt.Printf("Tipo de publicação: %s\n", *tipoPublicacao)
+	} else {
+		fmt.Printf("Tipo de publicação: qualquer\n")
+	}
+	
+	// Mostrar anos se pelo menos um deles foi especificado
+	if *anoMinimo > 0 || *anoMaximo > 0 {
+		anoMinStr := "não especificado"
+		anoMaxStr := "não especificado"
+		
+		if *anoMinimo > 0 {
+			anoMinStr = fmt.Sprintf("%d", *anoMinimo)
+		}
+		
+		if *anoMaximo > 0 {
+			anoMaxStr = fmt.Sprintf("%d", *anoMaximo)
+		}
+		
+		fmt.Printf("Anos de publicação: %s até %s\n", anoMinStr, anoMaxStr)
+	} else {
+		fmt.Printf("Anos de publicação: qualquer\n")
+	}
 	fmt.Println("========================================\n")
 
 	// URL base da página de busca
 	baseURL := "https://www.periodicos.capes.gov.br/index.php/acervo/buscador.html"
 
-	// Construir os parâmetros de query
-	params := url.Values{}
+	// Construir os parâmetros de query manualmente para controlar a ordem exata
+	var urlParams []string
 	
-	// Adicionar termo de busca
-	params.Add("q", termo)
+	// Adicionar termo de busca (primeiro parâmetro)
+	termoBusca := url.QueryEscape(termo)
+	// Substituir %20 por + para match exato com a URL de exemplo
+	termoBusca = strings.ReplaceAll(termoBusca, "%20", "+")
+	urlParams = append(urlParams, "q="+termoBusca)
 	
-	// Adicionar fonte expandida
-	params.Add("source", "expanded")
+	// Adicionar source vazio (segundo parâmetro)
+	urlParams = append(urlParams, "source=")
 	
 	// Adicionar parâmetro de acesso aberto apenas se o flag foi especificado
 	if acesso == "sim" {
-		params.Add("open_access[]", "open_access==1")
+		urlParams = append(urlParams, "open_access%5B%5D=open_access%3D%3D1")
 	} else if acesso == "nao" {
-		params.Add("open_access[]", "open_access==0")
+		urlParams = append(urlParams, "open_access%5B%5D=open_access%3D%3D0")
 	}
-	// Se acesso estiver vazio, não adiciona nenhum parâmetro de acesso aberto
 	
-	// Construir a URL completa
-	searchURL := baseURL + "?" + params.Encode()
+	// Adicionar tipo de publicação apenas se o flag foi especificado
+	if *tipoPublicacao != "" {
+		tipoEncoded := url.QueryEscape("type=="+*tipoPublicacao)
+		urlParams = append(urlParams, "type%5B%5D="+tipoEncoded)
+	}
+	
+	// Adicionar anos de publicação apenas se especificados
+	if *anoMinimo > 0 {
+		urlParams = append(urlParams, fmt.Sprintf("publishyear_min%%5B%%5D=%d", *anoMinimo))
+	}
+	
+	if *anoMaximo > 0 {
+		urlParams = append(urlParams, fmt.Sprintf("publishyear_max%%5B%%5D=%d", *anoMaximo))
+	}
+	
+	// Construir a URL completa com parâmetros na ordem específica
+	searchURL := baseURL + "?" + strings.Join(urlParams, "&")
 	fmt.Println("URL da busca:", searchURL)
 
 	// Iniciar o navegador
