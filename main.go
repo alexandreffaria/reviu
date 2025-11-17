@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
 )
 
@@ -32,8 +32,9 @@ func promptTextRequired(label, hint string) string {
 }
 
 func main() {
-	// Definir flag para o termo de busca
-	searchTerm := flag.String("termo", "", "Termo para pesquisar")
+	// Definir flags para busca
+	searchTerm := flag.String("search", "Violência contra mulheres", "Termo para pesquisar")
+	acessoAberto := flag.String("oa", "", "Acesso aberto: 'sim', 'nao' ou omitir para qualquer")
 	flag.Parse()
 
 	// Se o termo de busca não foi fornecido como flag, solicitar ao usuário
@@ -42,37 +43,59 @@ func main() {
 		termo = promptTextRequired("TERMOS DE BUSCA", "texto livre (obrigatório)")
 	}
 
-	// Exibir termo de busca
+	// Validar e normalizar valor de acesso-aberto (se fornecido)
+	acesso := strings.ToLower(*acessoAberto)
+	if acesso != "" && acesso != "sim" && acesso != "nao" {
+		fmt.Println("Valor inválido para -oa. O valor será ignorado.")
+		acesso = ""
+	}
+
+	// Exibir relatório
 	fmt.Println("\n========================================")
 	fmt.Println(" RELATÓRIO DA BUSCA")
 	fmt.Println("========================================")
-	fmt.Printf("Termos de busca: %s\n", termo)
+	fmt.Printf("Termos de busca:   %s\n", termo)
+	if acesso != "" {
+		fmt.Printf("Acesso aberto:     %s\n", acesso)
+	} else {
+		fmt.Printf("Acesso aberto:     qualquer\n")
+	}
 	fmt.Println("========================================\n")
 
 	// URL base da página de busca
 	baseURL := "https://www.periodicos.capes.gov.br/index.php/acervo/buscador.html"
 
+	// Construir os parâmetros de query
+	params := url.Values{}
+	
+	// Adicionar termo de busca
+	params.Add("q", termo)
+	
+	// Adicionar fonte expandida
+	params.Add("source", "expanded")
+	
+	// Adicionar parâmetro de acesso aberto apenas se o flag foi especificado
+	if acesso == "sim" {
+		params.Add("open_access[]", "open_access==1")
+	} else if acesso == "nao" {
+		params.Add("open_access[]", "open_access==0")
+	}
+	// Se acesso estiver vazio, não adiciona nenhum parâmetro de acesso aberto
+	
+	// Construir a URL completa
+	searchURL := baseURL + "?" + params.Encode()
+	fmt.Println("URL da busca:", searchURL)
+
 	// Iniciar o navegador
 	u := launcher.New().Headless(false).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
-	page := browser.MustPage(baseURL).MustWaitLoad()
-
-	fmt.Println("Realizando busca pelo termo:", termo)
-
-	// Localizar o campo de busca
-	inputField := page.MustElement("input[name='q']")
 	
-	// Focar no campo e preencher
-	inputField.MustFocus()
-	inputField.MustInput(termo)
+	// Abrir a página com a URL de busca
+	fmt.Println("Abrindo navegador com a URL de busca...")
+	_ = browser.MustPage(searchURL).MustWaitLoad()
 	
-	// Pressionar Enter usando o teclado da página
-	page.Keyboard.Press(input.Enter)
-	
-	// Aguardar o carregamento da página
-	page.MustWaitLoad()
-	
-	fmt.Println("Busca realizada com sucesso. Mantendo navegador aberto por 30 segundos.")
+	fmt.Println("Busca realizada com sucesso.")
+	fmt.Println("Mantendo navegador aberto por 30 segundos para visualização dos resultados.")
 	
 	// Manter o navegador aberto por 30 segundos
 	time.Sleep(30 * time.Second)
