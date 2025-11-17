@@ -38,7 +38,9 @@ go build -o capes-search
 | `-oa` | Filtro de acesso aberto | `-oa sim` ou `-oa nao` | Opcional |
 | `-t` | Tipo de publicação | `-t "Artigo"` | Opcional |
 | `-pymin` | Ano mínimo de publicação | `-pymin 2010` | Opcional |
-| `-pymax` | Ano máximo de publicação | `-pymax 2023` | Opcional |
+| `-pymax` | Ano máximo de publicação | `-pymax 2023` | Opcional, se omitido com `-pymin` definido, usa o ano atual |
+| `-pr` | Revisão por pares | `-pr sim` ou `-pr nao` | Opcional |
+| `-lang` | Filtro de idiomas | `-lang "Português/Inglês/Espanhol"` | Opcional, múltiplos idiomas separados por `/` |
 
 ### Exemplos
 
@@ -57,14 +59,34 @@ go run main.go -search "inteligência artificial" -oa sim
 go run main.go -search "vacinas covid" -t "Artigo"
 ```
 
-**4. Busca por período específico:**
+**4. Busca por período específico (definindo ano mínimo e máximo):**
 ```bash
 go run main.go -search "mudanças climáticas" -pymin 2015 -pymax 2023
 ```
 
-**5. Combinando múltiplos filtros:**
+**5. Busca por período específico (definindo apenas o ano mínimo):**
 ```bash
-go run main.go -search "pandemia" -oa sim -t "Artigo" -pymin 2020 -pymax 2023
+go run main.go -search "mudanças climáticas" -pymin 2015
+```
+
+**6. Busca com filtro de revisão por pares:**
+```bash
+go run main.go -search "vacinas" -pr sim
+```
+
+**7. Busca por idioma:**
+```bash
+go run main.go -search "educação" -lang "Português"
+```
+
+**8. Busca por múltiplos idiomas:**
+```bash
+go run main.go -search "economia" -lang "Português/Inglês"
+```
+
+**9. Combinando múltiplos filtros:**
+```bash
+go run main.go -search "pandemia" -oa sim -t "Artigo" -pr sim -pymin 2020 -lang "Português/Inglês"
 ```
 
 ## Funcionamento

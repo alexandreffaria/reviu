@@ -38,6 +38,8 @@ func main() {
 	tipoPublicacao := flag.String("t", "", "Tipo de publicação (ex: 'Artigo')")
 	anoMinimo := flag.Int("pymin", 0, "Ano mínimo de publicação")
 	anoMaximo := flag.Int("pymax", 0, "Ano máximo de publicação")
+	revisaoPares := flag.String("pr", "", "Revisão por pares: 'sim', 'nao' ou omitir para qualquer")
+	linguagens := flag.String("lang", "", "Idiomas separados por '/' (ex: 'Português/Inglês/Espanhol')")
 	flag.Parse()
 
 	// Se o termo de busca não foi fornecido como flag, solicitar ao usuário
@@ -51,6 +53,13 @@ func main() {
 	if acesso != "" && acesso != "sim" && acesso != "nao" {
 		fmt.Println("Valor inválido para -oa. O valor será ignorado.")
 		acesso = ""
+	}
+	
+	// Validar e normalizar valor de revisão por pares (se fornecido)
+	revisao := strings.ToLower(*revisaoPares)
+	if revisao != "" && revisao != "sim" && revisao != "nao" {
+		fmt.Println("Valor inválido para -pr. O valor será ignorado.")
+		revisao = ""
 	}
 
 	// Exibir relatório
@@ -70,8 +79,17 @@ func main() {
 		fmt.Printf("Tipo de publicação: qualquer\n")
 	}
 	
+	// Obter o ano atual
+	anoAtual := time.Now().Year()
+	
+	// Ajustar o ano máximo para o ano atual se apenas o mínimo foi especificado
+	anoMaximoEfetivo := *anoMaximo
+	if *anoMinimo > 0 && *anoMaximo == 0 {
+		anoMaximoEfetivo = anoAtual
+	}
+	
 	// Mostrar anos se pelo menos um deles foi especificado
-	if *anoMinimo > 0 || *anoMaximo > 0 {
+	if *anoMinimo > 0 || anoMaximoEfetivo > 0 {
 		anoMinStr := "não especificado"
 		anoMaxStr := "não especificado"
 		
@@ -79,13 +97,31 @@ func main() {
 			anoMinStr = fmt.Sprintf("%d", *anoMinimo)
 		}
 		
-		if *anoMaximo > 0 {
-			anoMaxStr = fmt.Sprintf("%d", *anoMaximo)
+		if anoMaximoEfetivo > 0 {
+			anoMaxStr = fmt.Sprintf("%d", anoMaximoEfetivo)
 		}
 		
 		fmt.Printf("Anos de publicação: %s até %s\n", anoMinStr, anoMaxStr)
 	} else {
 		fmt.Printf("Anos de publicação: qualquer\n")
+	}
+	
+	if revisao != "" {
+		fmt.Printf("Revisão por pares:  %s\n", revisao)
+	} else {
+		fmt.Printf("Revisão por pares:  qualquer\n")
+	}
+	
+	// Processar linguagens
+	var listaLinguagens []string
+	if *linguagens != "" {
+		listaLinguagens = strings.Split(*linguagens, "/")
+		for i, lang := range listaLinguagens {
+			listaLinguagens[i] = strings.TrimSpace(lang)
+		}
+		fmt.Printf("Idiomas:            %s\n", strings.Join(listaLinguagens, ", "))
+	} else {
+		fmt.Printf("Idiomas:            qualquer\n")
 	}
 	fmt.Println("========================================\n")
 
@@ -122,8 +158,23 @@ func main() {
 		urlParams = append(urlParams, fmt.Sprintf("publishyear_min%%5B%%5D=%d", *anoMinimo))
 	}
 	
-	if *anoMaximo > 0 {
-		urlParams = append(urlParams, fmt.Sprintf("publishyear_max%%5B%%5D=%d", *anoMaximo))
+	// Usar o ano máximo especificado ou o ano atual se apenas o mínimo foi fornecido
+	if anoMaximoEfetivo > 0 {
+		urlParams = append(urlParams, fmt.Sprintf("publishyear_max%%5B%%5D=%d", anoMaximoEfetivo))
+	}
+	
+	// Adicionar parâmetro de revisão por pares apenas se o flag foi especificado
+	if revisao == "sim" {
+		urlParams = append(urlParams, "peer_reviewed%5B%5D=peer_reviewed%3D%3D1")
+	} else if revisao == "nao" {
+		urlParams = append(urlParams, "peer_reviewed%5B%5D=peer_reviewed%3D%3D0")
+	}
+	
+	// Adicionar parâmetros de idioma
+	for _, lang := range listaLinguagens {
+		// Escape especial para o ê em "Português"
+		langEncoded := strings.ReplaceAll(lang, "ê", "%C3%AA")
+		urlParams = append(urlParams, fmt.Sprintf("language%%5B%%5D=language%%3D%%3D%s", langEncoded))
 	}
 	
 	// Construir a URL completa com parâmetros na ordem específica
