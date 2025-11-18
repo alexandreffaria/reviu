@@ -112,11 +112,12 @@ func (p *MainResultProcessor) ProcessSearchResults(searchParams *config.SearchPa
 	
 	// Create processor options from search params
 	options := ProcessorOptions{
-		MaxPages:      searchParams.MaxPages,
-		Timeout:       600, // 10 minutes default
-		RetryAttempts: 3,
-		PageTimeout:   30,  // 30 seconds per page
-		NavigationTimeout: 30, // 30 seconds for navigation
+		MaxPages:          searchParams.MaxPages,
+		Timeout:           600, // 10 minutes default
+		RetryAttempts:     3,
+		PageTimeout:       30,  // 30 seconds per page
+		NavigationTimeout: 30,  // 30 seconds for navigation
+		PageDelay:         searchParams.PageDelay, // Use the delay specified in search params
 	}
 	
 	// Set options

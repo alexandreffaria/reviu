@@ -140,7 +140,12 @@ func (e *CAPESResultExtractor) Process(ctx context.Context, searchTerm string, s
 			pageURL := e.buildPageURL(searchURL, currentPage)
 			e.log.Info("Navigating to page %d using URL: %s", currentPage, pageURL)
 			
-			// Open the page
+			// Close the previous browser to avoid resource leaks
+			if err := e.browser.Close(); err != nil {
+				e.log.Warn("Error closing previous browser instance: %v", err)
+			}
+			
+			// Open a new browser for this page
 			if err := e.browser.Open(pageURL); err != nil {
 				e.log.Error("Failed to open page %d: %v", currentPage, err)
 				break
@@ -164,9 +169,12 @@ func (e *CAPESResultExtractor) Process(ctx context.Context, searchTerm string, s
 		// Update collection metadata
 		e.collection.UpdatePageCount(currentPage)
 		
-		// Delay between page navigations to avoid overloading the server
+		// Delay between page navigations to avoid being blocked
 		if currentPage < maxPagesToProcess {
-			time.Sleep(2 * time.Second)
+			if e.options.PageDelay > 0 {
+				e.log.Info("Waiting %v between pages to avoid blocking...", e.options.PageDelay)
+				time.Sleep(e.options.PageDelay)
+			}
 		}
 	}
 	

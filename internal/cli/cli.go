@@ -146,6 +146,11 @@ func (c *CLI) PrintSearchReport(params *config.SearchParams) {
 		}
 		
 		fmt.Printf("Incluir cabeçalhos: %v\n", params.IncludeHeaders)
+		
+		// Show page delay if set
+		if params.PageDelay > 0 {
+			fmt.Printf("Delay entre páginas: %v\n", params.PageDelay)
+		}
 	}
 	fmt.Println("========================================\n")
 }
@@ -193,8 +198,14 @@ func (c *CLI) PrintUsage() {
 	fmt.Println("  -max-pages  Número máximo de páginas a processar (0 = todas)")
 	fmt.Println("  -no-headers Não incluir cabeçalhos no arquivo CSV")
 	
+	fmt.Println("\nFlags de proteção anti-bloqueio:")
+	fmt.Println("  -delay      Espera entre páginas para evitar bloqueio (ex: '5s', '10s')")
+	fmt.Println("  -stealth    Ativa modo stealth para evitar detecção (padrão: true)")
+	fmt.Println("  -random-ua  Usa agente de usuário aleatório (padrão: true)")
+	
 	fmt.Println("\nExemplos:")
 	fmt.Println("  capes-search -search \"violência contra mulheres\"")
 	fmt.Println("  capes-search -search \"inteligência artificial\" -oa sim -output \"resultados.csv\"")
 	fmt.Println("  capes-search -search \"vacinas\" -pr sim -lang \"Português/Inglês\" -max-pages 5 -output \"vacinas.csv\"")
+	fmt.Println("  capes-search -search \"machine learning\" -delay 5s -output \"ml_results.csv\"")
 }

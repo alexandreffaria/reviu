@@ -3,43 +3,39 @@ package config
 import (
 	"flag"
 	"strings"
+	"time"
 
 	"github.com/alexandreffaria/reviu/internal/logger"
 )
 
-// FlagNames contains the names of all command-line flags
-type FlagNames struct {
-	SearchTerm      string
-	AccessType      string
-	PublicationType string
-	YearMin         string
-	YearMax         string
-	PeerReviewed    string
-	Languages       string
-	
-	// Export flags
-	OutputFile      string
-	ExportFormat    string
-	MaxPages        string
-	NoHeaders       string
-}
+// Flag name constants are defined below instead of using a struct
+// to avoid potential redefinition issues when flags are registered
 
-// DefaultFlagNames provides the standard flag names
-var DefaultFlagNames = FlagNames{
-	SearchTerm:      "search",
-	AccessType:      "oa",
-	PublicationType: "t",
-	YearMin:         "pymin",
-	YearMax:         "pymax",
-	PeerReviewed:    "pr",
-	Languages:       "lang",
+// Flag constants
+const (
+	// Default flags
+	searchTermFlag      = "search"
+	accessTypeFlag      = "oa"
+	publicationTypeFlag = "t"
+	yearMinFlag         = "pymin"
+	yearMaxFlag         = "pymax"
+	peerReviewedFlag    = "pr"
+	languagesFlag       = "lang"
 	
-	// Export flags
-	OutputFile:      "output",
-	ExportFormat:    "format",
-	MaxPages:        "max-pages",
-	NoHeaders:       "no-headers",
-}
+	// Flags for output formatting
+	outputFileFlag      = "output"
+	formatFlag          = "format"
+	maxPagesFlag        = "max-pages"
+	noHeadersFlag       = "no-headers"
+	
+	// Browser options
+	rodOptionsFlag      = "rod-options"
+	stealthModeFlag     = "stealth"
+	randomUserAgentFlag = "random-ua"
+	slowMotionFlag      = "slow"
+	proxyFlag           = "proxy"
+	pageDelayFlag       = "delay"
+)
 
 // SetupFlags configures and parses command-line flags
 // Returns a populated SearchParams struct
@@ -47,30 +43,45 @@ func SetupFlags(log logger.Logger) *SearchParams {
 	params := NewSearchParams()
 	
 	// Define all flag pointers
-	searchTerm := flag.String(DefaultFlagNames.SearchTerm, "",
+	// Define flags using the constants - NOT the DefaultFlagNames struct
+	searchTerm := flag.String(searchTermFlag, "",
 	                            "Termo para pesquisar")
-	accessType := flag.String(DefaultFlagNames.AccessType, "",
+	accessType := flag.String(accessTypeFlag, "",
 	                            "Acesso aberto: 'sim', 'nao' ou omitir para qualquer")
-	publicationType := flag.String(DefaultFlagNames.PublicationType, "",
+	publicationType := flag.String(publicationTypeFlag, "",
 	                                 "Tipo de publicação (ex: 'Artigo')")
-	yearMin := flag.Int(DefaultFlagNames.YearMin, 0,
+	yearMin := flag.Int(yearMinFlag, 0,
 	                      "Ano mínimo de publicação")
-	yearMax := flag.Int(DefaultFlagNames.YearMax, 0,
+	yearMax := flag.Int(yearMaxFlag, 0,
 	                      "Ano máximo de publicação")
-	peerReviewed := flag.String(DefaultFlagNames.PeerReviewed, "",
+	peerReviewed := flag.String(peerReviewedFlag, "",
 	                              "Revisão por pares: 'sim', 'nao' ou omitir para qualquer")
-	languages := flag.String(DefaultFlagNames.Languages, "",
+	languages := flag.String(languagesFlag, "",
 	                           "Idiomas separados por '/' (ex: 'Português/Inglês/Espanhol')")
 	
 	// Export flags
-	outputFile := flag.String(DefaultFlagNames.OutputFile, "",
+	outputFile := flag.String(outputFileFlag, "",
 	                            "Arquivo de saída para resultados (ex: 'resultados.csv')")
-	exportFormat := flag.String(DefaultFlagNames.ExportFormat, "csv",
+	exportFormat := flag.String(formatFlag, "csv",
 	                              "Formato de exportação (csv)")
-	maxPages := flag.Int(DefaultFlagNames.MaxPages, 0,
+	maxPages := flag.Int(maxPagesFlag, 0,
 	                       "Número máximo de páginas a processar (0 = todas)")
-	noHeaders := flag.Bool(DefaultFlagNames.NoHeaders, false,
+	noHeaders := flag.Bool(noHeadersFlag, false,
 	                         "Não incluir linha de cabeçalho no arquivo CSV")
+	
+	// Browser anti-blocking options
+	rodOptions := flag.String(rodOptionsFlag, "",
+	                            "Set the default value of options used by rod.")
+	stealthMode := flag.Bool(stealthModeFlag, true,
+	                           "Enable stealth mode to avoid detection")
+	randomUserAgent := flag.Bool(randomUserAgentFlag, true,
+	                               "Use random user-agent string")
+	slowMotion := flag.Duration(slowMotionFlag, 200*time.Millisecond,
+	                              "Add delay between browser actions (e.g. '200ms')")
+	pageDelay := flag.Duration(pageDelayFlag, 2*time.Second,
+	                             "Delay between pages to avoid being blocked (e.g. '2s', '5s')")
+	proxy := flag.String(proxyFlag, "",
+	                       "Use proxy for browser (format: 'http://user:pass@host:port')")
 	
 	// Parse the flags
 	flag.Parse()
@@ -106,6 +117,14 @@ func SetupFlags(log logger.Logger) *SearchParams {
 	
 	// Set ExportResults based on whether OutputFile is provided
 	params.ExportResults = params.OutputFile != ""
+	
+	// Set browser options
+	params.RodOptions = *rodOptions
+	params.StealthMode = *stealthMode
+	params.RandomUserAgent = *randomUserAgent
+	params.SlowMotion = *slowMotion
+	params.PageDelay = *pageDelay
+	params.Proxy = *proxy
 	
 	return params
 }

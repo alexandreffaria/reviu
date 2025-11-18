@@ -2,27 +2,30 @@ package result
 
 import (
 	"context"
+	"time"
 	
 	"github.com/alexandreffaria/reviu/internal/logger"
 )
 
 // ProcessorOptions defines options for the result processing
 type ProcessorOptions struct {
-	MaxPages          int    // Maximum number of pages to process (0 = all)
-	Timeout           int    // Timeout in seconds for the entire operation
-	RetryAttempts     int    // Number of retry attempts for page navigation
-	PageTimeout       int    // Timeout in seconds for processing a single page
-	NavigationTimeout int    // Timeout in seconds for page navigation operations
+	MaxPages          int           // Maximum number of pages to process (0 = all)
+	Timeout           int           // Timeout in seconds for the entire operation
+	RetryAttempts     int           // Number of retry attempts for page navigation
+	PageTimeout       int           // Timeout in seconds for processing a single page
+	NavigationTimeout int           // Timeout in seconds for page navigation operations
+	PageDelay         time.Duration // Delay between pages to avoid being blocked
 }
 
 // DefaultProcessorOptions returns default options for the processor
 func DefaultProcessorOptions() ProcessorOptions {
 	return ProcessorOptions{
-		MaxPages:          0,    // Process all pages
-		Timeout:           600,  // 10 minutes timeout for entire operation
-		RetryAttempts:     3,    // 3 retry attempts
-		PageTimeout:       30,   // 30 seconds per page
-		NavigationTimeout: 30,   // 30 seconds for navigation operations
+		MaxPages:          0,              // Process all pages
+		Timeout:           600,            // 10 minutes timeout for entire operation
+		RetryAttempts:     3,              // 3 retry attempts
+		PageTimeout:       30,             // 30 seconds per page
+		NavigationTimeout: 30,             // 30 seconds for navigation operations
+		PageDelay:         2 * time.Second, // 2 seconds delay between pages
 	}
 }
 

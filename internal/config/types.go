@@ -25,6 +25,14 @@ type SearchParams struct {
 	ExportFormat    string // Format to use for export (default: "csv")
 	MaxPages        int    // Maximum number of pages to process (0 = all)
 	IncludeHeaders  bool   // Whether to include headers in CSV export (default: true)
+	
+	// Browser options
+	RodOptions      string        // Rod options string
+	StealthMode     bool          // Enable stealth mode to avoid bot detection
+	RandomUserAgent bool          // Use random user agent
+	SlowMotion      time.Duration // Add delay between browser operations
+	Proxy           string        // Use proxy for requests
+	PageDelay       time.Duration // Delay between page requests to avoid being blocked
 
 	// Computed parameters (populated during validation)
 	EffectiveYearMax int // Calculated max year value
@@ -50,10 +58,15 @@ const (
 	PeerReviewAny PeerReviewOption = ""
 )
 
-// NewSearchParams creates a new SearchParams instance with current year set
+// NewSearchParams creates a new SearchParams instance with current year set and default values
 func NewSearchParams() *SearchParams {
 	return &SearchParams{
-		CurrentYear: time.Now().Year(),
+		CurrentYear:      time.Now().Year(),
+		StealthMode:      true,
+		RandomUserAgent:  true,
+		SlowMotion:       200 * time.Millisecond,
+		PageDelay:        2 * time.Second,
+		IncludeHeaders:   true,
 	}
 }
 
@@ -122,6 +135,11 @@ func (p *SearchParams) String() string {
 			result += ", MaxPages: " + fmt.Sprintf("%d", p.MaxPages)
 		} else {
 			result += ", MaxPages: all"
+		}
+		
+		// Add page delay info
+		if p.PageDelay > 0 {
+			result += ", PageDelay: " + p.PageDelay.String()
 		}
 	}
 

@@ -106,7 +106,27 @@ func run(log logger.Logger) error {
 
 	// Initialize browser
 	browserLog.Info("Initializing browser")
-	browser := browser.NewBrowser(browserLog, nil)
+	// Configure browser options based on parameters
+	browserOptions := browser.DefaultBrowserOptions
+	
+	// Apply user-configured options
+	browserOptions = browserOptions.
+		WithStealthMode(params.StealthMode).
+		WithRandomUserAgent(params.RandomUserAgent).
+		WithSlowMotion(params.SlowMotion)
+	
+	// Set proxy if provided
+	if params.Proxy != "" {
+		browserOptions = browserOptions.WithProxy(params.Proxy)
+	}
+	
+	// Create the browser instance with configured options
+	browserLog.Info("Creating browser with anti-blocking measures")
+	if params.StealthMode {
+		browserLog.Info("Stealth mode enabled to avoid detection")
+	}
+	
+	browser := browser.NewBrowser(browserLog, &browserOptions)
 
 	// Ensure browser is closed even if errors occur
 	defer func() {
@@ -116,6 +136,11 @@ func run(log logger.Logger) error {
 		}
 	}()
 
+	// Log browser anti-blocking configuration
+	browserLog.Info("Browser configuration: stealth=%v, random-ua=%v, delay=%v, proxy=%s",
+		params.StealthMode, params.RandomUserAgent, params.SlowMotion,
+		params.Proxy)
+	
 	// Determine if we're doing a simple view or exporting results
 	if params.ExportResults && params.OutputFile != "" {
 		// We're exporting results - use the result processor
