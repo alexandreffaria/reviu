@@ -59,7 +59,9 @@ jobs:
         env:
           ROD_LEAKLESS: "false"
         run: |
-          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -v -o capes-search${{ matrix.extension }} cmd/capes-search/main.go
+          # Explicitly set ROD_LEAKLESS=false to prevent Windows antivirus detection
+          echo "Building with ROD_LEAKLESS=false to prevent antivirus detection"
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -v -ldflags="-X 'main.leakless=false'" -o capes-search${{ matrix.extension }} cmd/capes-search/main.go
       
       - name: Rename binary for upload
         run: |

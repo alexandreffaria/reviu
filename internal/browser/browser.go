@@ -136,7 +136,8 @@ func (b *RodBrowser) Open(url string) error {
 	// Will set timeout after browser is initialized
 	
 	// Configure and launch the browser
-	l := launcher.New().Headless(b.options.Headless)
+	l := launcher.New().Headless(b.options.Headless).Leakless(false)
+	b.log.Debug("Disabled leakless mode to avoid antivirus detection")
 
 	// Apply anti-blocking measures
 	if b.options.StealthMode {
