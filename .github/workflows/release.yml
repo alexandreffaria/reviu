@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -41,7 +41,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -60,7 +60,7 @@ jobs:
           mv capes-search${{ matrix.extension }} capes-search-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.extension }}
       
       - name: Upload binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: capes-search-${{ matrix.os }}-${{ matrix.arch }}
           path: capes-search-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.extension }}
@@ -74,10 +74,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       
       - name: Create release
         id: create_release
