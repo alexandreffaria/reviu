@@ -44,6 +44,35 @@ GOOS=linux GOARCH=amd64 go build -o capes-search cmd/capes-search/main.go
 GOOS=darwin GOARCH=amd64 go build -o capes-search cmd/capes-search/main.go
 ```
 
+## Versões e Releases
+
+Este projeto utiliza GitHub Actions para automatizar o processo de build e release. O workflow configurado gera binários para Windows, Linux e macOS sempre que uma nova tag com prefixo "v" é criada.
+
+### Processo Automatizado de Release
+
+Quando uma nova tag é criada (ex: v1.0.0), o workflow:
+
+1. Executa todos os testes para garantir a qualidade do código
+2. Compila binários para:
+   - Windows (amd64)
+   - Linux (amd64)
+   - macOS (amd64)
+3. Cria automaticamente um release no GitHub com os binários anexados
+
+### Criando um Novo Release
+
+Para criar um novo release:
+
+```bash
+# Crie uma tag com o prefixo "v" seguido da versão
+git tag v1.0.0
+
+# Envie a tag para o GitHub para iniciar o workflow
+git push origin v1.0.0
+```
+
+Os binários compilados estarão disponíveis para download na página de Releases do GitHub após a conclusão do workflow.
+
 ## Como Usar
 
 Execute o programa usando `go run` ou utilize o binário compilado:
@@ -155,6 +184,22 @@ A ferramenta opera nos seguintes passos:
 - Recomenda-se utilizar um valor adequado para `-delay` (por exemplo, 3-5 segundos) para reduzir o risco de bloqueio.
 - Para coletas extensas, considere limitar o número de páginas com `-max-pages`.
 - O arquivo CSV resultante pode ser aberto em Excel, LibreOffice Calc, Google Sheets, etc.
+
+### Nota para Usuários Windows
+
+Em alguns casos, o Windows Defender ou outros antivírus podem identificar incorretamente o executável como uma ameaça devido à biblioteca de automação de navegador (Rod) utilizada. Este é um falso positivo.
+
+Se você encontrar este problema, você pode executar o programa com a variável de ambiente `ROD_LEAKLESS=false`:
+
+```bash
+# No Windows CMD
+set ROD_LEAKLESS=false
+.\capes-search.exe -search "seu termo de busca"
+
+# No Windows PowerShell
+$env:ROD_LEAKLESS="false"
+.\capes-search.exe -search "seu termo de busca"
+```
 
 ## Estrutura do Projeto
 

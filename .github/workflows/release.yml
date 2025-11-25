@@ -1,0 +1,101 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.x'
+          cache: true
+      
+      - name: Test
+        run: go test -v ./...
+
+  build:
+    name: Build binaries
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            extension: .exe
+          - os: linux
+            arch: amd64
+            extension: ''
+          - os: darwin
+            arch: amd64
+            extension: ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.x'
+          cache: true
+      
+      - name: Build binary
+        env:
+          ROD_LEAKLESS: "false"
+        run: |
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -v -o capes-search${{ matrix.extension }} cmd/capes-search/main.go
+      
+      - name: Rename binary for upload
+        run: |
+          mv capes-search${{ matrix.extension }} capes-search-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.extension }}
+      
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: capes-search-${{ matrix.os }}-${{ matrix.arch }}
+          path: capes-search-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.extension }}
+
+  release:
+    name: Create release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            capes-search-windows-amd64/capes-search-windows-amd64.exe
+            capes-search-linux-amd64/capes-search-linux-amd64
+            capes-search-darwin-amd64/capes-search-darwin-amd64
+          body: |
+            This release was automatically built using GitHub Actions.
+            
+            **Note for Windows users:** If your antivirus flags the executable, this is due to the Rod browser automation library.
+            You can run the application with the environment variable `ROD_LEAKLESS=false` to avoid this issue:
+            ```
+            set ROD_LEAKLESS=false
+            ./capes-search.exe -search "your search term"
+            ```
