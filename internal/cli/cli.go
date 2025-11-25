@@ -152,7 +152,7 @@ func (c *CLI) PrintSearchReport(params *config.SearchParams) {
 			fmt.Printf("Delay entre páginas: %v\n", params.PageDelay)
 		}
 	}
-	fmt.Println("========================================\n")
+	fmt.Println("========================================")
 }
 
 // PrintSearchURL prints the generated search URL

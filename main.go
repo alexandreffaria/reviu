@@ -123,7 +123,7 @@ func main() {
 	} else {
 		fmt.Printf("Idiomas:            qualquer\n")
 	}
-	fmt.Println("========================================\n")
+	fmt.Println("========================================")
 
 	// URL base da página de busca
 	baseURL := "https://www.periodicos.capes.gov.br/index.php/acervo/buscador.html"
