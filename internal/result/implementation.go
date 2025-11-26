@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	"github.com/alexandreffaria/reviu/internal/browser"
@@ -96,9 +97,20 @@ func (p *MainResultProcessor) ProcessAndExport(ctx context.Context, searchParams
 			return errors.NewExternalError("failed to export results", err)
 		}
 		
+		// Generate a path for the summary file
+		summaryPath := getSummaryFilePath(searchParams.OutputFile)
+		
+		// Write or append search summary to CSV
+		if err := WriteSummaryToCSV(collection, searchParams, summaryPath, p.log); err != nil {
+			p.log.Error("Failed to write summary CSV: %v", err)
+			// We continue even if summary fails - it's not critical
+		} else {
+			p.log.Info("Search summary exported to %s", summaryPath)
+		}
+		
 		// Report success
 		duration := time.Since(startTime)
-		p.log.Info("Successfully exported %d results from %d pages in %v", 
+		p.log.Info("Successfully exported %d results from %d pages in %v",
 			collection.TotalResults, collection.TotalPages, duration)
 	}
 	
@@ -125,4 +137,26 @@ func (p *MainResultProcessor) ProcessSearchResults(searchParams *config.SearchPa
 	
 	// Process and export
 	return p.ProcessAndExport(ctx, searchParams, searchURL)
+}
+
+// getSummaryFilePath derives a summary file path from the main output file path
+// For example, if output path is "results.csv", it returns "results_summary.csv"
+func getSummaryFilePath(outputPath string) string {
+	// Extract directory and file name
+	dir := filepath.Dir(outputPath)
+	fileName := filepath.Base(outputPath)
+	
+	// Get file name without extension
+	ext := filepath.Ext(fileName)
+	nameOnly := fileName[:len(fileName)-len(ext)]
+	
+	// Create summary file name
+	summaryFileName := nameOnly + "_summary" + ext
+	
+	// Join with directory
+	if dir == "." {
+		return summaryFileName
+	}
+	
+	return filepath.Join(dir, summaryFileName)
 }
