@@ -216,7 +216,7 @@ func (e *CAPESResultExtractor) extractResultsFromCurrentPage(pageNum int, pageUR
 		}
 
 		// Navigate to the detail page to extract author and year metadata
-		author, year := e.extractMetadataForResult(result.URL)
+		author, year := e.extractMetadataForResult(result.URL, pageURL)
 		result.Author = author
 		result.Year = year
 
@@ -227,28 +227,16 @@ func (e *CAPESResultExtractor) extractResultsFromCurrentPage(pageNum int, pageUR
 }
 
 // extractMetadataForResult navigates to the publication page and collects metadata
-// using a dedicated browser instance so the main search page remains untouched.
-func (e *CAPESResultExtractor) extractMetadataForResult(detailURL string) (string, string) {
+func (e *CAPESResultExtractor) extractMetadataForResult(detailURL, returnURL string) (string, string) {
 	if detailURL == "" {
 		return "", ""
 	}
 
-	// Use a separate headless browser for detail extraction to avoid disrupting the
-	// main search page state while still visiting every article page for metadata.
-	detailBrowserOptions := browser.DefaultBrowserOptions
-	detailBrowserOptions.Headless = true
-	detailBrowser := browser.NewBrowser(e.log, &detailBrowserOptions)
-
-	if err := detailBrowser.Open(detailURL); err != nil {
+	// Navigate to the detail page
+	if err := e.browser.Navigate(detailURL); err != nil {
 		e.log.Warn("Failed to open details page %s: %v", detailURL, err)
 		return "", ""
 	}
-
-	defer func() {
-		if err := detailBrowser.Close(); err != nil {
-			e.log.Warn("Failed to close detail browser for %s: %v", detailURL, err)
-		}
-	}()
 
 	timeout := time.Duration(e.options.PageTimeout) * time.Second
 	if timeout <= 0 {
@@ -256,19 +244,29 @@ func (e *CAPESResultExtractor) extractMetadataForResult(detailURL string) (strin
 	}
 
 	// Wait for the details to load
-	if err := detailBrowser.WaitForElement(DetailYearSelector, timeout); err != nil {
+	if err := e.browser.WaitForElement(DetailYearSelector, timeout); err != nil {
 		e.log.Debug("Year element not found on detail page %s: %v", detailURL, err)
 	}
 
-	author := e.extractAuthorsFromDetail(detailBrowser)
-	year := e.extractYearFromDetail(detailBrowser)
+	author := e.extractAuthorsFromDetail()
+	year := e.extractYearFromDetail()
+
+	// Navigate back to the search results page to continue processing
+	if err := e.browser.Navigate(returnURL); err != nil {
+		e.log.Warn("Failed to return to results page from %s: %v", detailURL, err)
+		return author, year
+	}
+
+	if err := e.browser.WaitForElement(ResultLinkSelector, timeout); err != nil {
+		e.log.Debug("Results did not finish loading after returning from %s: %v", detailURL, err)
+	}
 
 	return author, year
 }
 
 // extractAuthorsFromDetail collects author names from the details page
-func (e *CAPESResultExtractor) extractAuthorsFromDetail(detailBrowser browser.Browser) string {
-	authorElements, err := detailBrowser.GetElements(DetailAuthorSelector)
+func (e *CAPESResultExtractor) extractAuthorsFromDetail() string {
+	authorElements, err := e.browser.GetElements(DetailAuthorSelector)
 	if err != nil {
 		e.log.Warn("Could not extract authors from detail page: %v", err)
 		return ""
@@ -291,8 +289,8 @@ func (e *CAPESResultExtractor) extractAuthorsFromDetail(detailBrowser browser.Br
 }
 
 // extractYearFromDetail collects the publication year from the details page
-func (e *CAPESResultExtractor) extractYearFromDetail(detailBrowser browser.Browser) string {
-	yearText, err := detailBrowser.GetElementText(DetailYearSelector)
+func (e *CAPESResultExtractor) extractYearFromDetail() string {
+	yearText, err := e.browser.GetElementText(DetailYearSelector)
 	if err != nil {
 		e.log.Warn("Could not extract year from detail page: %v", err)
 		return ""
