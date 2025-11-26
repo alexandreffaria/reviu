@@ -10,23 +10,27 @@ import (
 // SearchResult represents a single research publication from search results
 type SearchResult struct {
 	// Core fields extracted directly from search results
-	Title     string // Publication title
-	URL       string // URL to details page
-	ID        string // Document ID (extracted from URL)
-	
+	Title string // Publication title
+	URL   string // URL to details page
+	ID    string // Document ID (extracted from URL)
+
+	// Detailed metadata extracted from the publication page
+	Author string // Author name(s) extracted from the details page
+	Year   string // Publication year
+
 	// Additional metadata that might be available
-	Source    string // Source of the publication, if available
-	
+	Source string // Source of the publication, if available
+
 	// Collection metadata
-	PageFound int    // The page number where this result was found
-	Position  int    // Position in the result list (1-based)
+	PageFound int // The page number where this result was found
+	Position  int // Position in the result list (1-based)
 }
 
 // NewSearchResult creates a new search result with the given title and URL
 func NewSearchResult(title, url string, pageNum, position int) SearchResult {
 	// Extract ID from URL if possible
 	id := extractIDFromURL(url)
-	
+
 	return SearchResult{
 		Title:     title,
 		URL:       url,
@@ -44,13 +48,13 @@ func (r SearchResult) String() string {
 // SearchCollection represents a collection of search results from a search session
 type SearchCollection struct {
 	// Search metadata
-	SearchTerm   string          // The search term used
-	SearchDate   time.Time       // When the search was performed
-	TotalPages   int             // Total number of pages processed
-	TotalResults int             // Total number of results collected
-	
+	SearchTerm   string    // The search term used
+	SearchDate   time.Time // When the search was performed
+	TotalPages   int       // Total number of pages processed
+	TotalResults int       // Total number of results collected
+
 	// The actual results
-	Results      []SearchResult  // All search results collected
+	Results []SearchResult // All search results collected
 }
 
 // NewSearchCollection creates a new search collection
@@ -98,16 +102,16 @@ func extractIDFromURL(urlStr string) string {
 	// Find the position of "id=" in the URL
 	idPos := strings.Index(urlStr, "id=")
 	if idPos == -1 {
-		return ""  // No ID found
+		return "" // No ID found
 	}
 
 	// Get everything after "id="
 	idPart := urlStr[idPos+3:]
-	
+
 	// If there are other query parameters after this one, stop at the &
 	if ampPos := strings.Index(idPart, "&"); ampPos != -1 {
 		idPart = idPart[:ampPos]
 	}
-	
+
 	return idPart
 }
